@@ -1,6 +1,6 @@
 {
   "name": "dsh-robolectric-runner",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "DeepSeek Harness tool for safe Android local JVM/Robolectric test execution with structured Gradle XML results.",
   "type": "module",
   "main": "lib/index.js",
@@ -20,7 +20,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "verify": "node test/verify.mjs"
+    "verify": "node test/verify.mjs",
+    "prepublishOnly": "npm run build && npm run verify"
   },
   "engines": {
     "node": ">=22.0.0"

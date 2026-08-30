@@ -1,13 +1,71 @@
-# dsh-robolectric-runner 1.3.0
+# dsh-robolectric-runner
 
-A DeepSeek Harness bundle that registers `run_robolectric` for Android local JVM tests, including Robolectric tests when the project is configured for Robolectric.
+[![npm version](https://img.shields.io/npm/v/dsh-robolectric-runner)](https://www.npmjs.com/package/dsh-robolectric-runner)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A [DeepSeek Harness](https://github.com/deepseek-ai/dsh) bundle that registers the `run_robolectric` tool for executing Android local JVM unit tests — including Robolectric tests — directly from the DSH agent, with structured Gradle XML test-result parsing.
+
+## Installation
+
+### 1. Install the npm package as a DSH profile dependency
+
+```powershell
+npm i dsh-robolectric-runner
+```
+
+### 2. Register the bundle into your DSH profile
+
+```powershell
+dsh plugin --profile web add dsh-robolectric-runner
+```
+
+Verify the plugin is recognized:
+
+```powershell
+dsh --profile web --dump-config
+```
+
+### 3. Start the web runner
+
+```powershell
+npx @deepseek-ai/dsh web --no-open
+```
+
+The plugin is now available as the `run_robolectric` tool in the DSH agent's tool set.
+
+---
+
+## Tool semantics
+
+`run_robolectric` runs Android local JVM tests. It is **not** an Android instrumentation/device test runner.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `module` | `string` | auto-detected | Optional Gradle module path, e.g. `"app"` or `":feature:login"`. If omitted, the plugin checks whether the root project itself is an Android project, then scans modules declared in `settings.gradle(.kts)` (preferring `:app`), and finally inspects immediate child directories. |
+| `variant` | `string` | `"Debug"` | Build variant, e.g. `"Debug"`, `"Release"`, `"BenchmarkDebug"`. |
+| `testFilter` | `string` | — | A single Gradle `--tests` selector, e.g. `"com.example.LoginTest"` or `"com.example.LoginTest.login"`. Shell metacharacters and spaces are rejected. |
+| `rerunFailed` | `boolean` | `false` | When `true`, reads the previous XML test reports for the same task and reruns only the failed/error test cases. Cannot be combined with `testFilter`. |
+| `timeoutMs` | `number` | `300000` | Maximum Gradle execution time in milliseconds (1000 – 900000). |
+
+### Output
+
+The tool returns a structured result with:
+
+- **Test counts** — total, passed, failed, skipped
+- **Failure details** — class name, method name, and error message for each failed test (up to 100)
+- **Report diagnostics** — number of XML report files found and how many were parseable
+- **Raw output tail** — the last 6000 characters of the Gradle console output for debugging
+
+---
 
 ## Design goals
 
 - Uses the DSH bundle manifest (`dsh.bundle.patch`).
 - Registers exactly one Cordis plugin with a matching id/name.
 - Uses the active DSH session workspace (`agent.session.header.cwd`).
-- Does not accept an arbitrary shell command from the model.
+- Does **not** accept an arbitrary shell command from the model.
 - Validates module, variant and test filters before execution.
 - Uses the Gradle wrapper from the active project.
 - Uses direct `spawn()` with fixed argv on POSIX and a fixed `cmd.exe /c` wrapper on Windows. Model input is restricted to a conservative allowlist, so shell metacharacters are rejected rather than interpreted.
@@ -17,67 +75,63 @@ A DeepSeek Harness bundle that registers `run_robolectric` for Android local JVM
 - Implements `rerunFailed` from the previous XML reports and passes the specific failing tests through repeated Gradle `--tests` selectors.
 - Uses `--rerun-tasks` only to force the requested Gradle task to execute; it is not used as a substitute for `rerunFailed` filtering.
 - Marks the tool non-concurrency-safe by design through the tool runtime's normal serialization defaults; the plugin does not advertise concurrent safety.
-- Keeps the DSH core packages as optional peers so the profile/runtime supplies the single installed copy. This avoids packaging a second private copy of `dsh-tools`, which can cause symbol-identity failures in Harness profiles.
 
-## Important npm/DSH packaging note
+---
 
-The npm registry currently exposes a stale `latest` tag for `@deepseek-ai/dsh-tools` at `0.0.1-rc.1`; DeepSeek Harness maintainers/users have documented that line as broken for external installs and recommend `0.0.1-rc.5` as an installable workaround. The plugin therefore uses `0.0.1-rc.5` only as a **development/build dependency**. At runtime the DSH profile should provide its own installed `dsh-tools` copy through the optional peer.
+## DSH dependency model
 
-Do not convert `@deepseek-ai/dsh-tools` into a normal runtime dependency unless you intentionally want a second copy of the Harness tool package in the profile.
+The plugin declares `@deepseek-ai/dsh-tools@0.0.1-rc.5` as both a **runtime dependency** and a **dev dependency**, and `@deepseek-ai/cordis` as an **optional peer dependency**.
 
-## Local verification
+**Why a pinned runtime dependency?**  
+Out-of-tree DSH bundles are loaded from their installed package location, so Node.js must be able to resolve `@deepseek-ai/dsh-tools` from the plugin package itself. The version `0.0.1-rc.5` is pinned because the npm `latest` tag for `@deepseek-ai/dsh-tools` currently points to an older version (`0.0.1-rc.1`) with a broken peer graph; this pin is the documented community workaround.
+
+**Why an optional peer?**  
+`@deepseek-ai/cordis` is supplied by the DSH runtime profile. Making it an optional peer avoids packaging a second private copy of Cordis and prevents symbol-identity conflicts.
+
+---
+
+## Runtime compatibility
+
+The runtime API surface intentionally stays on the stable `defineTool` / `ctx.tools.register` contract and avoids newer optional `ToolDefinition` features. The profile's installed `@deepseek-ai/dsh-tools` must be compatible with that stable surface — the plugin has been verified against DSH runtime `dsh-tools@0.1.1-rc.2`.
+
+---
+
+## Development & local verification
 
 ```powershell
-cd C:\path\to\dsh-robolectric-runner-v1.3.0
+# Clone or download the source
+cd dsh-robolectric-runner
+
+# Install dependencies
 npm install
+
+# Build TypeScript source
 npm run build
+
+# Run the built-in verification (manifest + XML parser + schema validation)
 npm run verify
 ```
 
-Expected verification result:
+Expected output:
 
 ```text
 Plugin manifest and XML parser verification: OK
 ```
 
-## Install into the DSH web profile
+### Running the schema validation tests
+
+Additional verification scripts are available in `test/`:
 
 ```powershell
-dsh plugin --profile web add C:\path\to\dsh-robolectric-runner-v1.3.0
+# Regression test: output schema declares all fields
+node test/schema-verify.mjs
+
+# End-to-end test against the actual DSH runtime dsh-tools version
+node test/runtime-compat.mjs
 ```
 
-Then inspect the composed profile:
+---
 
-```powershell
-dsh --profile web --dump-config
-```
+## License
 
-Start the web runner:
-
-```powershell
-npx @deepseek-ai/dsh web --no-open
-```
-
-The plugin should no longer emit the previous `declares no dsh.bundle` warning.
-
-## Tool semantics
-
-`run_robolectric` runs Android local JVM tests. It is not an Android instrumentation/device test runner.
-
-Parameters:
-
-- `module`: optional module path such as `app` or `:feature:login`.
-- `variant`: optional build variant; defaults to `Debug`.
-- `testFilter`: optional single Gradle `--tests` selector.
-- `rerunFailed`: reruns only failed/error test cases found in the previous XML reports for the same task. It cannot be combined with `testFilter`.
-- `timeoutMs`: 1,000 to 900,000 ms, default 300,000 ms.
-
-If no module is supplied, the plugin first checks whether the root project itself looks like an Android project, then checks modules declared by `settings.gradle(.kts)`, preferring `:app`, and finally checks immediate child directories.
-
-## Runtime compatibility
-
-The runtime API surface intentionally stays on the stable `defineTool`/`ctx.tools` contract and avoids newer optional ToolDefinition features. The profile's installed `@deepseek-ai/dsh-tools` must be compatible with that stable surface.
-
-## Runtime dependency note
-
-`@deepseek-ai/dsh-tools@0.0.1-rc.5` is declared as a runtime dependency, not only a dev/peer dependency. This is intentional: out-of-tree DSH bundles are loaded from their installed package location, so Node must be able to resolve `@deepseek-ai/dsh-tools` from the plugin package itself. `0.0.1-rc.5` is pinned because the npm `latest` tag currently points to an older broken peer graph; this pin is the documented community workaround.
+[MIT](LICENSE)
