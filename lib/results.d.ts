@@ -17,4 +17,4 @@ export interface ReportParseResult extends TestSummary {
 export declare function reportDirectory(projectRoot: string, modulePath: string, taskName: string): string;
 export declare function collectReportFiles(projectRoot: string, modulePath: string, taskName: string): string[];
 export declare function parseReports(files: string[], minimumMtimeMs?: number): ReportParseResult;
-export declare function emptySummary(): TestSummary;
+export declare function emptySummary(): ReportParseResult;

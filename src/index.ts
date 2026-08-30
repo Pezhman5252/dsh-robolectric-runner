@@ -14,8 +14,8 @@ import {
   collectReportFiles,
   emptySummary,
   parseReports,
+  type ReportParseResult,
   type TestFailure,
-  type TestSummary,
 } from './results.js'
 
 export const name = 'dsh-robolectric-runner'
@@ -41,7 +41,7 @@ interface ToolResult {
   projectRoot: string
   gradleTask: string
   selectedFilters: string[]
-  summary: TestSummary
+  summary: ReportParseResult
   rawOutputTail: string
 }
 
@@ -127,6 +127,8 @@ export function apply(ctx: Context) {
               passed: { type: 'number', required: true },
               failed: { type: 'number', required: true },
               skipped: { type: 'number', required: true },
+              reportFiles: { type: 'number', required: true },
+              usableReports: { type: 'number', required: true },
               failuresList: {
                 type: 'array',
                 required: true,
@@ -155,6 +157,7 @@ export function apply(ctx: Context) {
           `- **Task:** ${result.gradleTask}`,
           `- **Summary:** ${result.message}`,
           `- **Tests:** ${result.summary.total} total, ${result.summary.passed} passed, ${result.summary.failed} failed, ${result.summary.skipped} skipped`,
+          `- **Reports:** ${result.summary.usableReports} usable of ${result.summary.reportFiles} XML file(s)`,
         ]
         if (result.selectedFilters.length) lines.push(`- **Filters:** ${result.selectedFilters.join(', ')}`)
         if (result.summary.failuresList.length) {

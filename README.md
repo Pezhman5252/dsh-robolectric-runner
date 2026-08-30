@@ -1,4 +1,4 @@
-# dsh-robolectric-runner 1.2.0
+# dsh-robolectric-runner 1.3.0
 
 A DeepSeek Harness bundle that registers `run_robolectric` for Android local JVM tests, including Robolectric tests when the project is configured for Robolectric.
 
@@ -28,7 +28,7 @@ Do not convert `@deepseek-ai/dsh-tools` into a normal runtime dependency unless 
 ## Local verification
 
 ```powershell
-cd C:\path\to\dsh-robolectric-runner-v1.2.0
+cd C:\path\to\dsh-robolectric-runner-v1.3.0
 npm install
 npm run build
 npm run verify
@@ -43,7 +43,7 @@ Plugin manifest and XML parser verification: OK
 ## Install into the DSH web profile
 
 ```powershell
-dsh plugin --profile web add C:\path\to\dsh-robolectric-runner-v1.2.0
+dsh plugin --profile web add C:\path\to\dsh-robolectric-runner-v1.3.0
 ```
 
 Then inspect the composed profile:

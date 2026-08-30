@@ -182,6 +182,6 @@ export function parseReports(files: string[], minimumMtimeMs?: number): ReportPa
   }
 }
 
-export function emptySummary(): TestSummary {
-  return { total: 0, passed: 0, failed: 0, skipped: 0, failuresList: [] }
+export function emptySummary(): ReportParseResult {
+  return { total: 0, passed: 0, failed: 0, skipped: 0, failuresList: [], reportFiles: 0, usableReports: 0 }
 }
